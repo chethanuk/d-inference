@@ -1,0 +1,62 @@
+name: Verify 811
+
+# Fork-only. The upstream workflows all target `blacksmith-*` runner labels,
+# which a fork has no runners for, so every check on the fork queues forever.
+# This runs the #811 evidence on GitHub-hosted Apple Silicon instead.
+# NOT part of the change proposed upstream.
+on:
+  push:
+    branches: [ci/verify-811]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    name: Pipe-buffer probe (swiftc, no MLX)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain and machine
+        run: |
+          sw_vers
+          uname -m
+          swift --version
+      - name: Compile the production runner with the verification driver
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/probe"
+          cp provider-swift/Sources/darkbloom/Fan/FanProcessRunner.swift "$RUNNER_TEMP/probe/"
+          cp .github/verify-811/driver.swift "$RUNNER_TEMP/probe/"
+          swiftc -swift-version 6 \
+            "$RUNNER_TEMP/probe/FanProcessRunner.swift" \
+            "$RUNNER_TEMP/probe/driver.swift" \
+            -o "$RUNNER_TEMP/probe/probe"
+      - name: Run the probe
+        timeout-minutes: 5
+        run: "$RUNNER_TEMP/probe/probe"
+
+  package:
+    name: swift build --build-tests + FanProcessRunnerTests
+    runs-on: macos-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Toolchain
+        run: |
+          sw_vers
+          uname -m
+          swift --version
+          xcodebuild -version || true
+      - name: Build provider-swift (incl. tests)
+        working-directory: provider-swift
+        run: swift build --build-tests
+      - name: Run FanProcessRunnerTests
+        working-directory: provider-swift
+        timeout-minutes: 15
+        run: swift test --filter FanProcessRunnerTests
+      - name: Run FanProcessRunnerTests again (flake check)
+        working-directory: provider-swift
+        timeout-minutes: 15
+        run: swift test --filter FanProcessRunnerTests
