@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -553,5 +554,124 @@ func TestRoutingMetrics_AllTagsOnSelection(t *testing.T) {
 		if !found {
 			t.Errorf("metric %q missing tag %q; matching packets: %v", c.metric, c.tag, matches)
 		}
+	}
+}
+
+// TestRoutingCostBreakdownEmittedForSelectedDecisions drives the routing funnel
+// every dispatch path goes through (primary, retry, queue drain, backup) and
+// checks the winner's cost split reaches DogStatsD as histograms tagged by
+// model only, so the per-model p95 breakdown widget has data.
+func TestRoutingCostBreakdownEmittedForSelectedDecisions(t *testing.T) {
+	const model = "cost-metric-model"
+	names := []string{
+		"routing.cost_state_ms", "routing.cost_queue_ms", "routing.cost_pending_ms",
+		"routing.cost_backlog_ms", "routing.cost_this_req_ms", "routing.cost_health_ms",
+		"routing.effective_decode_tps", "routing.static_decode_tps",
+	}
+	values := func(d registry.RoutingDecision) []float64 {
+		return []float64{d.StateMs, d.QueueMs, d.PendingMs, d.BacklogMs, d.ThisReqMs, d.HealthMs, d.EffectiveTPS, d.StaticTPS}
+	}
+	synthetic := registry.RoutingDecision{
+		ProviderID: "p1",
+		StateMs:    1.5, QueueMs: 2.5, PendingMs: 3.5, BacklogMs: 4.5, ThisReqMs: 5.5, HealthMs: 6.5,
+		EffectiveTPS: 40.5, StaticTPS: 50.5,
+	}
+	queueDrain := synthetic
+	queueDrain.ProviderID = ""
+
+	cases := []struct {
+		name        string
+		decide      func(t *testing.T, d *dispatchState) registry.RoutingDecision
+		dispatchErr string
+		override    string
+		wantCost    bool
+	}{
+		{
+			name: "real scheduler decision",
+			decide: func(t *testing.T, d *dispatchState) registry.RoutingDecision {
+				makeRoutableProvider(t, d.s.registry, "p-real", model)
+				pr := &registry.PendingRequest{
+					RequestID:             "req-cost-1",
+					Model:                 model,
+					EstimatedPromptTokens: 100,
+					RequestedMaxTokens:    256,
+					ChunkCh:               make(chan registry.ProviderChunk, 1),
+					CompleteCh:            make(chan protocol.UsageInfo, 1),
+					ErrorCh:               make(chan protocol.InferenceErrorMessage, 1),
+				}
+				p, decision := d.s.registry.ReserveProviderEx(model, pr)
+				if p == nil {
+					t.Fatal("ReserveProviderEx returned nil — provider not routable")
+				}
+				d.provider, d.pr = p, pr
+				return decision
+			},
+			wantCost: true,
+		},
+		{
+			name:     "synthetic decision with every component set",
+			decide:   func(*testing.T, *dispatchState) registry.RoutingDecision { return synthetic },
+			wantCost: true,
+		},
+		{
+			name: "selected with all components zero",
+			decide: func(*testing.T, *dispatchState) registry.RoutingDecision {
+				return registry.RoutingDecision{ProviderID: "p1"}
+			},
+			wantCost: true,
+		},
+		{
+			name:     "queue drain selected without provider id",
+			decide:   func(*testing.T, *dispatchState) registry.RoutingDecision { return queueDrain },
+			override: "selected",
+			wantCost: true,
+		},
+		{
+			name:        "no provider available",
+			decide:      func(*testing.T, *dispatchState) registry.RoutingDecision { return queueDrain },
+			dispatchErr: "no provider available",
+		},
+		{
+			name:     "queued",
+			decide:   func(*testing.T, *dispatchState) registry.RoutingDecision { return queueDrain },
+			override: "queued",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newUDPCollector(t)
+			defer c.Close()
+			srv := newTestServerForDispatch(t)
+			dd := newTestDD(t, c)
+			defer dd.Close()
+			srv.SetDatadog(dd)
+			d := &dispatchState{s: srv, r: httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil), model: model}
+
+			decision := tc.decide(t, d)
+			d.recordRoutingDecision(decision, tc.dispatchErr, tc.override)
+			_ = dd.Statsd.Flush()
+			packets := c.drain()
+
+			for i, v := range values(decision) {
+				name := names[i]
+				got := findMetrics(packets, "d_inference."+name+":")
+				isTPS := strings.HasSuffix(name, "_decode_tps")
+				if !tc.wantCost || (isTPS && v <= 0) {
+					if len(got) != 0 {
+						t.Errorf("%s: want no packet, got %v", name, got)
+					}
+					continue
+				}
+				if len(got) != 1 {
+					t.Errorf("%s: want 1 packet, got %d: %v (all packets: %v)", name, len(got), got, packets)
+					continue
+				}
+				wantValue := ":" + strconv.FormatFloat(v, 'f', -1, 64) + "|h|"
+				if p := got[0]; !strings.Contains(p, wantValue) || !strings.Contains(p, "model:"+model) || strings.Contains(p, "provider_id:") {
+					t.Errorf("%s: packet %q, want value %q, tag model:%s and no provider_id", name, p, wantValue, model)
+				}
+			}
+		})
 	}
 }

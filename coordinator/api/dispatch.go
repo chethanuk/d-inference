@@ -450,6 +450,24 @@ func (d *dispatchState) recordRoutingDecisionFor(provider *registry.Provider, pr
 		s.ddCount("routing.scans", int64(decision.ScanCount), []string{"model:" + d.model, "outcome:" + outcome})
 	}
 
+	// The winner's cost split feeds the per-model p95 breakdown widget. Tagged
+	// by model only to keep cardinality bounded; failed scans carry no split.
+	if outcome == "selected" {
+		tags := []string{"model:" + d.model}
+		s.ddHistogram("routing.cost_state_ms", decision.StateMs, tags)
+		s.ddHistogram("routing.cost_queue_ms", decision.QueueMs, tags)
+		s.ddHistogram("routing.cost_pending_ms", decision.PendingMs, tags)
+		s.ddHistogram("routing.cost_backlog_ms", decision.BacklogMs, tags)
+		s.ddHistogram("routing.cost_this_req_ms", decision.ThisReqMs, tags)
+		s.ddHistogram("routing.cost_health_ms", decision.HealthMs, tags)
+		if decision.EffectiveTPS > 0 {
+			s.ddHistogram("routing.effective_decode_tps", decision.EffectiveTPS, tags)
+		}
+		if decision.StaticTPS > 0 {
+			s.ddHistogram("routing.static_decode_tps", decision.StaticTPS, tags)
+		}
+	}
+
 	record := &store.InferenceRouteRecord{
 		RequestID:               requestID,
 		Attempt:                 attempt,

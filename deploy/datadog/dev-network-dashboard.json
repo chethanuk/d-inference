@@ -559,6 +559,78 @@
           },
           {
             "definition": {
+              "type": "timeseries",
+              "title": "Routing Cost Breakdown (p95) by Model",
+              "show_legend": true,
+              "legend_layout": "auto",
+              "requests": [
+                {
+                  "response_format": "timeseries",
+                  "queries": [
+                    {
+                      "name": "query1",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_state_ms.95percentile{$env,model:$model}"
+                    },
+                    {
+                      "name": "query2",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_queue_ms.95percentile{$env,model:$model}"
+                    },
+                    {
+                      "name": "query3",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_pending_ms.95percentile{$env,model:$model}"
+                    },
+                    {
+                      "name": "query4",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_backlog_ms.95percentile{$env,model:$model}"
+                    },
+                    {
+                      "name": "query5",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_this_req_ms.95percentile{$env,model:$model}"
+                    },
+                    {
+                      "name": "query6",
+                      "data_source": "metrics",
+                      "query": "avg:d_inference.routing.cost_health_ms.95percentile{$env,model:$model}"
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1",
+                      "alias": "state"
+                    },
+                    {
+                      "formula": "query2",
+                      "alias": "queue"
+                    },
+                    {
+                      "formula": "query3",
+                      "alias": "pending"
+                    },
+                    {
+                      "formula": "query4",
+                      "alias": "backlog"
+                    },
+                    {
+                      "formula": "query5",
+                      "alias": "this_req"
+                    },
+                    {
+                      "formula": "query6",
+                      "alias": "health"
+                    }
+                  ],
+                  "display_type": "area"
+                }
+              ]
+            }
+          },
+          {
+            "definition": {
               "type": "sunburst",
               "title": "Requests by Model Type",
               "requests": [
