@@ -1,13 +1,41 @@
 # Changelog
 
-## Unreleased — Nemotron native paging and MTP prefix checkpoints
+## Release candidate v0.9.2 — Gemma QAT caching, adaptive MTP and Nemotron Lightning (not shipped; 2026-09-10)
 
-- Select native paged KV and encrypted complete-prefix caching by default for the exact Nemotron Lightning registry/Hugging Face IDs, retaining explicit rollback controls. Keep native activation/KV precision and FP32 persistent Mamba state.
-- Give the embedded MTP assistant request-owned paged KV and an exact trusted-history checkpoint codec, so prompt prefixes restore with MTP enabled without sharing speculative state. Bind persisted state to the Nemotron numerical controls. MTP uses adaptive depth up to seven and captured target verification; test and benchmark results remain scoped to the measured artifact and machine, not fleet qualification.
+Source changes since `v0.9.1`. Provider changes require a new signed bundle.
+The provider wire protocol remains compatible with the 0.9.1 coordinator;
+coordinator and console changes below require their own deployments. The
+[rollout review](docs/reports/2026-09-10-provider-092-rollout-review.md) records
+compatibility checks and outstanding runtime qualification.
 
-- Route native reasoning/content/tool channels through the existing coordinator-serving engine and validate forced tool calls before publication. No new localhost testing endpoints or personal artifact aliases are included.
+### Provider
 
-## Release candidate v0.9.1 — cache reliability and recovery (not shipped; 2026-09-09)
+- **Gemma QAT SSD prefix caching** — Enable authenticated complete paged checkpoints by default for exact `gemma-4-26b-qat-4bit`. Preserve tenant, model, prompt, binary, metallib and numerical-state identity checks, the global cache disable and cold fallback. Other Gemma artifacts and GPT-OSS caching remain opt-in. A new binary starts a new checkpoint identity; existing 0.9.1 checkpoints are not reused across the upgrade.
+- **Adaptive Gemma MTP** — Automatically resolve the catalog assistant for that exact QAT target and select ordinary decode or one draft token from measured committed output and elapsed time. Include seed work, reset workload learning when requests finish or IDs are reused, and track compilation warmup by exact verification shape. Support target-prefix sampling for temperature/top-p/top-k/min-p, with ordinary decode for unsupported transforms and explicit diagnostic verification controls retained.
+- **Assistant activation while serving** — Download and verify the optional assistant while the current engine serves. Reserve staging memory and retain its target against eviction; publish reduced capacity immediately and restore survivor KV grants after discarded preparation. After network rollout jitter, close only that model's new admissions, advertise `reloading`, and finish accepted work before swapping. Racing requests receive transient 503 `slot_state` refusals. Timeout or cancellation discards the candidate and reopens the original engine without cancelling accepted requests. Standalone follows the same bounded drain without fleet jitter; insufficient memory preserves target-only serving.
+- **Assistant download sources** — Honor catalog-declared immutable Hugging Face assistant revisions with checksum-verified R2 fallback and jittered fetch retries. Existing R2-only metadata remains valid; shipping this binary does not apply the separate catalog patch. Standalone uses its configured coordinator catalog authority.
+- **Nemotron Lightning serving** — Admit the three explicitly qualified registry/Hugging Face IDs on the existing network and standalone paths; reject other `nemotron_h` artifacts. Enable native paged KV and complete encrypted prefix reuse with native activation/KV precision and FP32 persistent Mamba state. Declared embedded MTP uses request-owned assistant state, exact prefix checkpoints and adaptive depth up to seven; checkpoints include Nemotron numerical controls.
+- **Native reasoning and tools** — Separate Nemotron reasoning before tool parsing and validate required/named calls before publishing them through the existing encrypted response stream. Keep Gemma grammar enforcement and explicit per-model capability advertisement. Fix standalone Lightning admission to use the model's exact identity before the existing memory gate.
+- **Shared inference dependencies** — Pin the merged MLX core, C, Swift and SDK chain for explicit mutable Metal-kernel inputs, request-owned paged MTP, recurrent rollback, checkpoint ownership and typed native generation events. Release CI includes nonzero/no-skip synthetic SDK gates; real-model gates remain separately identified.
+
+### Companion coordinator and console changes
+
+- **Warm-pool headroom** — Grow warm replicas from measured headroom before a failed request, using measured occupancy growth, per-model headroom limits and bounded load bursts. Requires a coordinator deployment; the provider release does not activate this policy.
+- **Earnings navigation** — Keep earnings accessible after removing all linked Macs and display the supported payout-coverage notice. Requires a console deployment.
+
+### Qualification and rollout
+
+The reviewed source has passing component and integration evidence, but final
+combined-artifact model qualification remains incomplete. The amended Gemma
+admission-drain path still needs matched B1 on/off, B4 branched-prefix and real
+HTTP activation/download-failure checks. Earlier greedy MTP coding outputs
+show a repeated source-ID correctness defect absent from the ordinary-decode
+controls on that prompt; no general answer-quality equivalence or cache
+corruption conclusion is claimed. Published-chain Nemotron connected-serving
+and restart qualification also remain open. See the rollout review before
+fleet publication; source compatibility alone is not a release-ready verdict.
+
+## v0.9.1 — cache reliability and recovery (shipped; 2026-09-09)
 
 Source changes since `v0.9.0`. Provider changes require a new signed bundle;
 coordinator and console changes require their own deployments.
