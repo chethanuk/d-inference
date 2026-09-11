@@ -156,6 +156,12 @@ type UsageStore interface {
 	// Query and iteration failures return an error, never partial buckets.
 	UsageFlowBuckets(since time.Time, providerLocs map[string]*ProviderLocation) ([]UsageFlowBucket, error)
 
+	// UsageTokensByModel returns request and token totals per served model
+	// build since the cutoff, largest total first (ties by model), capped at
+	// the top 50. Rows without a model are skipped. An error distinguishes
+	// query failure from a successful empty window.
+	UsageTokensByModel(since time.Time) ([]UsageTokensByModelBucket, error)
+
 	// Leaderboard returns the top N accounts ranked by the given metric
 	// over the given time window. Zero `since` means all-time.
 	Leaderboard(metric LeaderboardMetric, since time.Time, limit int) []LeaderboardRow

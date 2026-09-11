@@ -132,6 +132,45 @@ func (s *PostgresStore) UsageFlowBuckets(since time.Time, _ map[string]*Provider
 	return buckets, nil
 }
 
+const usageTokensByModelSQL = `SELECT model, COUNT(*), COALESCE(SUM(prompt_tokens),0), COALESCE(SUM(completion_tokens),0)
+FROM usage
+WHERE created_at >= $1 AND model <> ''
+GROUP BY model
+ORDER BY SUM(prompt_tokens + completion_tokens) DESC, model
+LIMIT 50`
+
+// UsageTokensByModel aggregates the window's usage per served model build in
+// SQL, returning at most the top 50 builds by total tokens.
+func (s *PostgresStore) UsageTokensByModel(since time.Time) ([]UsageTokensByModelBucket, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var buckets []UsageTokensByModelBucket
+	err := s.withAnalyticsTx(ctx, func(tx pgx.Tx) error {
+		// Same rolling-cutoff plan choice as the geography aggregates.
+		if _, err := tx.Exec(ctx, "SET LOCAL plan_cache_mode = force_custom_plan"); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, usageTokensByModelSQL, since)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var b UsageTokensByModelBucket
+			if err := rows.Scan(&b.Model, &b.Requests, &b.PromptTokens, &b.CompletionTokens); err != nil {
+				return err
+			}
+			buckets = append(buckets, b)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("store: usage tokens by model: %w", err)
+	}
+	return buckets, nil
+}
+
 // NetworkTotals returns aggregated metrics across all earnings for the given
 // time window. Zero `since` means all-time. Totals combine inference work
 // (provider_earnings) with non-inference reward ledger entries (referral_reward,

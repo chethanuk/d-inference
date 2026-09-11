@@ -1,6 +1,6 @@
 # HTTP API contracts
 
-> Last updated: 2026-09-09 · commit `884d97862`
+> Last updated: 2026-09-11 · commit `ef7b5a9aa`
 
 The complete public HTTP surface of the coordinator, derived from the 108 `HandleFunc` registrations in `routes()` (`coordinator/api/server.go`), including the `/v1/` catch-all. Every route is listed once below with its handler symbol, authentication requirement, and rate-limit bucket; the second half of the page gives the wire shapes, headers, error table, SSE framing, limits, timeouts, and version-gate semantics that those routes share. For *why* the pipeline is built this way see [`../architecture/components/consumer.md`](../architecture/components/consumer.md); for the crypto model behind sealed transport see [`../architecture/security/encryption.md`](../architecture/security/encryption.md).
 
@@ -172,6 +172,8 @@ Cache behavior is implemented by `coordinator/api/cache_refresher.go`
 | `geography_snapshot_at` | RFC 3339 UTC observation start for the geography attempt, separate from core `snapshot_at`; empty before an attempt or after expiry | `coordinator/api/stats_geography.go` (`statsGeography`) |
 | `request_locations`, `request_regions`, `unknown_request_location_requests`, `suppressed_request_city_requests` | `null` when locations are unavailable; successful empty windows retain arrays and numeric counts. A failed attempt replaces previous geography rather than presenting stale figures as current | `coordinator/api/stats_geography.go` (`computeStatsGeography`, `addTo`) |
 | `request_flows` | `null` when flows are unavailable, an array (possibly empty) on success; independent of location status | `coordinator/api/stats_geography.go` (`computeStatsGeography`) |
+| `tokens_by_model_status` | `available` or `unavailable`, independent of the request-geography sections; absent on coordinators that predate the field | `coordinator/api/stats_geography.go` (`computeStatsGeography`) |
+| `tokens_by_model` | Last 24 h per served model build (`usage.model`), top 50 by total tokens, largest first. Rows `{model, requests, prompt_tokens, completion_tokens, total_tokens}`; `[]` for an empty window, `null` when unavailable | `coordinator/api/stats.go` (`aggregateTokensByModel`) |
 | `provider_locations`, `provider_regions` | Still computed from the live fleet with core stats; request-geography failures do not hide provider geography | `coordinator/api/stats.go` (`computeStats`, `aggregateProviderLocations`) |
 
 The stats, totals, and series handlers emit the 503 `service_unavailable` error

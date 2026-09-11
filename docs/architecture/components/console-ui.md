@@ -1,6 +1,6 @@
 # Console UI (`console-ui/`)
 
-> Last updated: 2026-09-09 · commit `884d97862`
+> Last updated: 2026-09-11 · commit `ef7b5a9aa`
 
 The console at `console.darkbloom.dev` is a Next.js 16 App Router / React 19 application (`console-ui/package.json`) that gives consumers a chat client, model catalog, network stats, billing, API-key management, and provider linking. The browser never calls the coordinator for authenticated work: every page fetches same-origin `/api/*` route handlers, which resolve the coordinator URL server-side and forward the caller's own credential. This page explains how those pieces fit; the coordinator routes they call are specified in [`../../reference/api-contracts.md`](../../reference/api-contracts.md). The internal, read-only operator dashboard is a separate app — see [`admin-ui.md`](admin-ui.md).
 
@@ -34,7 +34,7 @@ Files are under `console-ui/src/app/`. "Auth" is what the page itself requires; 
 | `/providers` | `providers/page.tsx`, `providers/dashboard/useFleetData.ts` | Fleet dashboard with account-scoped polling every `REFRESH_MS` = `15_000` ms; guests and confirmed empty accounts see the shared onboarding guide | Public guide; fleet data Privy |
 | `/providers/setup` | `providers/setup/page.tsx`, `components/provider-onboarding/*` | Requirements and install → link → start → check guide; existing providers see “Add another Mac” | Public guide; device linking Privy |
 | `/providers/earnings` | `providers/earnings/page.tsx` → `EarningsContent.tsx` (`ssr: false`) | `GET /api/me/earnings?limit=100` with the Privy token (falls back to the API key as Bearer), payouts card | Privy (or API key) |
-| `/stats` | `stats/page.tsx`, `stats/useNetworkStats.ts`, `stats/*`, `components/stats/network-map/*` | Continuous geography, activity, model-capacity, and hardware overview with an expandable provider directory; `useNetworkStats` polls same-origin stats, catalog, capacity, and totals independently of the primary render. All traffic ranges, including `30m`, use `/api/network/series?window=` and its explicit `end_at`; see [network stats snapshots](#network-stats-snapshots) | Public |
+| `/stats` | `stats/page.tsx`, `stats/useNetworkStats.ts`, `stats/*`, `components/stats/network-map/*` | Continuous geography, activity, tokens-by-model, model-capacity, and hardware overview with an expandable provider directory; `useNetworkStats` polls same-origin stats, catalog, capacity, and totals independently of the primary render. All traffic ranges, including `30m`, use `/api/network/series?window=` and its explicit `end_at`; see [network stats snapshots](#network-stats-snapshots) | Public |
 | `/earn` | `earn/page.tsx`, `earn/calc.ts`, `earn/useEarningsCalculator.ts`, `earn/providerReadiness.ts` | Earnings calculator — pure client math, no network call; readiness notice below `MIN_PROVIDER_MEMORY_GB` | Public; CTAs call `login()` |
 | `/leaderboard` | `leaderboard/page.tsx` → `components/leaderboard/LeaderboardContent.tsx`, `components/leaderboard/useLeaderboard.ts` | Provider leaderboard from `/api/leaderboard?<metric,window,limit>` | Public |
 
@@ -129,7 +129,7 @@ Credential column: **Privy (required)** = `privyAuth()` must be non-empty or the
 
 ### Network stats snapshots
 
-The stats page renders a continuous overview without waiting for catalog or capacity requests. Geography leads into side-by-side request and token charts, graphical model-capacity lanes (`console-ui/src/app/stats/models/ModelCapacityLandscape.tsx`, `ModelCapacityLandscape`), and linked silicon-generation and memory charts (`console-ui/src/app/stats/hardware/HardwareComposition.tsx`, `HardwareComposition`). Model diagnostics and the provider directory open on demand (`console-ui/src/app/stats/page.tsx`, `StatsPage`).
+The stats page renders a continuous overview without waiting for catalog or capacity requests. Geography leads into side-by-side request and token charts, 24-hour token bars per model with alias builds folded into the alias (`console-ui/src/app/stats/models/ModelTokenUsage.tsx`, `ModelTokenUsage`), graphical model-capacity lanes (`console-ui/src/app/stats/models/ModelCapacityLandscape.tsx`, `ModelCapacityLandscape`), and linked silicon-generation and memory charts (`console-ui/src/app/stats/hardware/HardwareComposition.tsx`, `HardwareComposition`). Model diagnostics and the provider directory open on demand (`console-ui/src/app/stats/page.tsx`, `StatsPage`).
 
 | Concern | Contract | Code |
 |---|---|---|

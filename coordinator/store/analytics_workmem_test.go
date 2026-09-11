@@ -201,6 +201,16 @@ func TestUsageAnalyticsRunInWorkMemTransaction(t *testing.T) {
 	assertAnalyticsTx(t, tracer.snapshot(), "WITH located_usage AS MATERIALIZED")
 
 	tracer.reset()
+	models, err := s.UsageTokensByModel(since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 1 || models[0].Model != "model" || models[0].Requests != 3 {
+		t.Fatalf("tokens by model = %+v, want one bucket with 3 requests", models)
+	}
+	assertAnalyticsTx(t, tracer.snapshot(), "GROUP BY model")
+
+	tracer.reset()
 	totals, err := s.NetworkTotals(since)
 	if err != nil {
 		t.Fatalf("network totals: %v", err)
@@ -251,6 +261,9 @@ func TestUsageAggregatesReturnErrorWhenUnavailable(t *testing.T) {
 	}
 	if _, err := s.UsageFlowBuckets(time.Now(), nil); err == nil {
 		t.Error("UsageFlowBuckets on a closed pool returned no error")
+	}
+	if _, err := s.UsageTokensByModel(time.Now()); err == nil {
+		t.Error("UsageTokensByModel on a closed pool returned no error")
 	}
 	since := time.Now().Add(-24 * time.Hour)
 	if _, err := s.UsageTotals(); err == nil {

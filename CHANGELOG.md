@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — per-model token usage on /stats
+
+- Show the last 24 hours of tokens per model as a bar chart on the public stats page. `/v1/stats` adds `tokens_by_model` (top 50 served builds) on the geography refresh lane, so a slow or failed aggregate reports `unavailable` without blocking core stats.
+
 ## Release candidate v0.9.2 — Gemma QAT caching, adaptive MTP and Nemotron Lightning (not shipped; 2026-09-10)
 
 Source changes since `v0.9.1`. Provider changes require a new signed bundle.

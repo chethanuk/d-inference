@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"sort"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -76,12 +78,13 @@ func TestStatsGeographyFailuresAreIndependentAndRecover(t *testing.T) {
 func TestStatsGeographyEmptyAndExpiredAreDifferent(t *testing.T) {
 	srv := newStatsSnapshotServer(store.NewMemory(store.Config{}))
 	cold := readStatsGeography(t, srv)
-	if cold.LocationsStatus != statsGeographyUnavailable || cold.FlowsStatus != statsGeographyUnavailable || cold.UnknownRequests != nil {
+	if cold.LocationsStatus != statsGeographyUnavailable || cold.FlowsStatus != statsGeographyUnavailable || cold.TokensByModelStatus != statsGeographyUnavailable || cold.TokensByModel != nil || cold.UnknownRequests != nil {
 		t.Fatal("cold geography must be unavailable")
 	}
 	srv.refreshStatsGeography()
 	empty := readStatsGeography(t, srv)
-	if empty.LocationsStatus != statsGeographyAvailable || empty.FlowsStatus != statsGeographyAvailable || empty.Locations == nil || empty.Flows == nil || empty.UnknownRequests == nil || *empty.UnknownRequests != 0 {
+	if empty.LocationsStatus != statsGeographyAvailable || empty.FlowsStatus != statsGeographyAvailable || empty.Locations == nil || empty.Flows == nil || empty.UnknownRequests == nil || *empty.UnknownRequests != 0 ||
+		empty.TokensByModelStatus != statsGeographyAvailable || empty.TokensByModel == nil || len(empty.TokensByModel) != 0 {
 		t.Fatalf("valid empty geography must remain distinguishable: %+v", empty)
 	}
 	if _, err := time.Parse(time.RFC3339Nano, empty.UpdatedAt); err != nil {
@@ -91,6 +94,72 @@ func TestStatsGeographyEmptyAndExpiredAreDifferent(t *testing.T) {
 	expired := readStatsGeography(t, srv)
 	if expired.LocationsStatus != statsGeographyUnavailable || expired.Locations != nil || expired.UnknownRequests != nil {
 		t.Fatal("expired geography must not become fresh empty data")
+	}
+}
+
+func TestStatsTokensByModelOrderAndAliases(t *testing.T) {
+	mem := store.NewMemory(store.Config{})
+	for range 5 {
+		mem.RecordUsageFullWithPublicModel("p", "c", "", "gemma-4-26b-qat-4bit", "gemma-4-26b", "req", 100, 20, 0, nil)
+	}
+	for i := range 3 {
+		prompt, completion := 50, 10
+		if i == 0 {
+			prompt, completion = 0, 0
+		}
+		mem.RecordUsageFullWithPublicModel("p", "c", "", "gemma-4-26b-8bit", "gemma-4-26b", "req", prompt, completion, 0, nil)
+	}
+	srv := newStatsSnapshotServer(mem)
+	srv.refreshStatsGeography()
+
+	got := readStatsGeography(t, srv)
+	if got.TokensByModelStatus != statsGeographyAvailable {
+		t.Fatalf("tokens_by_model_status = %q, want available", got.TokensByModelStatus)
+	}
+	want := []publicModelTokensBucket{
+		{Model: "gemma-4-26b-qat-4bit", Requests: 5, PromptTokens: 500, CompletionTokens: 100, TotalTokens: 600},
+		{Model: "gemma-4-26b-8bit", Requests: 3, PromptTokens: 100, CompletionTokens: 20, TotalTokens: 120},
+	}
+	if !reflect.DeepEqual(got.TokensByModel, want) {
+		t.Fatalf("tokens_by_model = %+v, want %+v", got.TokensByModel, want)
+	}
+
+	rr := httptest.NewRecorder()
+	srv.handleStats(rr, httptest.NewRequest(http.MethodGet, "/v1/stats", nil))
+	var raw struct {
+		TokensByModel []map[string]json.RawMessage `json:"tokens_by_model"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	var keys []string
+	for key := range raw.TokensByModel[0] {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	if wantKeys := []string{"completion_tokens", "model", "prompt_tokens", "requests", "total_tokens"}; !reflect.DeepEqual(keys, wantKeys) {
+		t.Fatalf("tokens_by_model row keys = %v, want %v", keys, wantKeys)
+	}
+}
+
+func TestStatsTokensByModelFailureIsIndependent(t *testing.T) {
+	srv, _, st := newStatsRefresherFixture(t)
+	if good := readStatsGeography(t, srv); good.TokensByModelStatus != statsGeographyAvailable || len(good.TokensByModel) == 0 {
+		t.Fatalf("fixture must contain per-model tokens: %+v", good)
+	}
+	st.tokensByModelFail.Store(true)
+	srv.refreshStatsGeography()
+	partial := readStatsGeography(t, srv)
+	if partial.TokensByModelStatus != statsGeographyUnavailable || partial.TokensByModel != nil {
+		t.Fatalf("failed per-model tokens exposed stale or empty figures: %+v", partial)
+	}
+	if partial.LocationsStatus != statsGeographyAvailable || partial.FlowsStatus != statsGeographyAvailable || len(partial.Locations) == 0 || len(partial.Flows) == 0 {
+		t.Fatal("per-model token failure hid valid request geography")
+	}
+	st.tokensByModelFail.Store(false)
+	srv.refreshStatsGeography()
+	if recovered := readStatsGeography(t, srv); recovered.TokensByModelStatus != statsGeographyAvailable || len(recovered.TokensByModel) == 0 {
+		t.Fatal("per-model tokens did not recover")
 	}
 }
 
