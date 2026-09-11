@@ -216,24 +216,33 @@ fi
 CLAIM_FILES=(README.md docs/threat-model.yaml docs/provider/hardware-requirements.md)
 CLAIM_RE='immutable for the process|reboot that kills|requires reboot|sound (given|because)'
 
+# Lines that restate the guarantee. The claim phrases are generic, so one
+# counts only when SIP is named on it or in the three lines above: the YAML
+# folds its scalars, so a claim can start below the "SIP" that scopes it. That
+# keeps the rule off unrelated reboot and soundness wording. The README's
+# one-line summary of the residual threat model names no mechanism of its own,
+# so match that sentence by name.
+claim_lines() {
+    local f=$1 n start
+    while IFS=: read -r n _; do
+        start=$((n > 3 ? n - 3 : 1))
+        if sed -n "${start},${n}p" "$f" | grep -qi 'SIP'; then printf '%s\n' "$n"; fi
+    done < <(grep -niE "$CLAIM_RE" "$f")
+    if [ "$f" = README.md ]; then grep -ni 'engineered out' "$f" | cut -d: -f1; fi
+}
+
 for f in "${CLAIM_FILES[@]}"; do
     [ -f "$f" ] || continue
-    while IFS=: read -r n _; do
-        # threat-model.yaml folds its scalars, so the qualifier can land a line
-        # or two below the claim; look at the claim line plus the next three.
-        # A qualifier pushed further away trips the rule instead of slipping
-        # past it, so the failure mode is a visible false positive, not a miss.
+    while IFS= read -r n; do
+        [ -n "$n" ] || continue
+        # The qualifier can land a line or two below the claim, for the same
+        # folding reason. A qualifier pushed further away trips the rule
+        # instead of slipping past it: the failure mode is a visible false
+        # positive, not a miss.
         if ! sed -n "${n},$((n + 3))p" "$f" | grep -qi 'unpatched'; then
             fail "$f:$n: SIP immutability claim without the \"unpatched kernel\" qualifier (TB-003)"
         fi
-    done < <(
-        # The claim phrases are generic, so a line counts only when it also
-        # names SIP; that keeps the rule off unrelated reboot and soundness
-        # wording elsewhere in the threat model. The README's one-line summary
-        # of the residual threat model names no mechanism, so match it by name.
-        { grep -niE "$CLAIM_RE" "$f" | grep -i 'SIP' ;
-          [ "$f" = README.md ] && grep -ni 'engineered out' "$f" ; } 2>/dev/null
-    )
+    done < <(claim_lines "$f" | sort -un)
 done
 
 # The macOS row carries the patch-level guidance that makes the qualifier
