@@ -111,7 +111,7 @@ e2e: e2e-integration ## Run the integration suite
 
 # ---- Docs -------------------------------------------------------------------
 
-docs-check: ## Lint docs/: freshness stamps, relative links, cited code paths, orphans
+docs-check: ## Lint docs/: freshness stamps, relative links, cited code paths, orphans, SIP-claim qualifier
 	./scripts/docs-check.sh
 
 docs-stamp: ## Refresh the freshness stamp on changed docs (FILES=... to target specific files)

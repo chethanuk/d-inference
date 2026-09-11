@@ -12,6 +12,10 @@
 #      because they legitimately describe code that has since moved.
 #   4. a docs/ Markdown file that no other doc links to (orphan) — every page
 #      must be reachable from an index. Exempt: docs/README.md, docs/AGENTS.md.
+#   5. a SIP-immutability claim in README.md, docs/threat-model.yaml or
+#      docs/provider/hardware-requirements.md that drops the "unpatched kernel"
+#      qualifier (the guarantee holds only under Assumption 1 of
+#      papers/dginf-private-inference.tex; see TB-003).
 #
 # Usage:
 #   scripts/docs-check.sh            # check git-tracked docs (what CI runs)
@@ -198,6 +202,35 @@ if [ "$ORPHAN_CHECK" -eq 1 ]; then
         fi
     done
     rm -f "$LINKED"
+fi
+
+# ---------------------------------------------------------------------------
+# 5. SIP immutability claims keep the kernel-integrity qualifier.
+#    "Immutable for the process lifetime" holds only while the macOS kernel has
+#    no unpatched vulnerability that bypasses SIP (Assumption 1,
+#    papers/dginf-private-inference.tex). These three pages state that guarantee
+#    to users, so a restatement that drops "unpatched" overstates it. Frozen
+#    records (docs/reports/, docs/design/) keep their original wording.
+# ---------------------------------------------------------------------------
+CLAIM_FILES=(README.md docs/threat-model.yaml docs/provider/hardware-requirements.md)
+CLAIM_RE='immutable for the process|reboot that kills|requires reboot|sound (given|because)|engineered out'
+
+for f in "${CLAIM_FILES[@]}"; do
+    [ -f "$f" ] || continue
+    while IFS=: read -r n _; do
+        # threat-model.yaml folds its scalars, so the qualifier can land a line
+        # or two below the claim; look at the claim line plus the next three.
+        if ! sed -n "${n},$((n + 3))p" "$f" | grep -qi 'unpatched'; then
+            fail "$f:$n: SIP immutability claim without the \"unpatched kernel\" qualifier (TB-003)"
+        fi
+    done < <(grep -niE "$CLAIM_RE" "$f")
+done
+
+# The macOS row carries the patch-level guidance that makes the qualifier
+# actionable for an operator.
+if [ -f docs/provider/hardware-requirements.md ] &&
+   ! grep '^| macOS |' docs/provider/hardware-requirements.md | grep -qi 'unpatched'; then
+    fail "docs/provider/hardware-requirements.md: macOS row lost the security-update guidance (TB-003)"
 fi
 
 # ---------------------------------------------------------------------------
