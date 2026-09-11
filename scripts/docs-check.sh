@@ -12,10 +12,11 @@
 #      because they legitimately describe code that has since moved.
 #   4. a docs/ Markdown file that no other doc links to (orphan) — every page
 #      must be reachable from an index. Exempt: docs/README.md, docs/AGENTS.md.
-#   5. a SIP-immutability claim in README.md, docs/threat-model.yaml or
-#      docs/provider/hardware-requirements.md that drops the "unpatched kernel"
-#      qualifier (the guarantee holds only under Assumption 1 of
-#      papers/dginf-private-inference.tex; see TB-003).
+#   5. a line naming SIP in README.md, docs/threat-model.yaml or
+#      docs/provider/hardware-requirements.md that restates the immutability
+#      guarantee but drops the "unpatched kernel" qualifier (the guarantee
+#      holds only under Assumption 1 of papers/dginf-private-inference.tex;
+#      see TB-003).
 #
 # Usage:
 #   scripts/docs-check.sh            # check git-tracked docs (what CI runs)
@@ -213,17 +214,26 @@ fi
 #    records (docs/reports/, docs/design/) keep their original wording.
 # ---------------------------------------------------------------------------
 CLAIM_FILES=(README.md docs/threat-model.yaml docs/provider/hardware-requirements.md)
-CLAIM_RE='immutable for the process|reboot that kills|requires reboot|sound (given|because)|engineered out'
+CLAIM_RE='immutable for the process|reboot that kills|requires reboot|sound (given|because)'
 
 for f in "${CLAIM_FILES[@]}"; do
     [ -f "$f" ] || continue
     while IFS=: read -r n _; do
         # threat-model.yaml folds its scalars, so the qualifier can land a line
         # or two below the claim; look at the claim line plus the next three.
+        # A qualifier pushed further away trips the rule instead of slipping
+        # past it, so the failure mode is a visible false positive, not a miss.
         if ! sed -n "${n},$((n + 3))p" "$f" | grep -qi 'unpatched'; then
             fail "$f:$n: SIP immutability claim without the \"unpatched kernel\" qualifier (TB-003)"
         fi
-    done < <(grep -niE "$CLAIM_RE" "$f")
+    done < <(
+        # The claim phrases are generic, so a line counts only when it also
+        # names SIP; that keeps the rule off unrelated reboot and soundness
+        # wording elsewhere in the threat model. The README's one-line summary
+        # of the residual threat model names no mechanism, so match it by name.
+        { grep -niE "$CLAIM_RE" "$f" | grep -i 'SIP' ;
+          [ "$f" = README.md ] && grep -ni 'engineered out' "$f" ; } 2>/dev/null
+    )
 done
 
 # The macOS row carries the patch-level guidance that makes the qualifier
