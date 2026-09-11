@@ -888,6 +888,7 @@ jobs:
           cat > /tmp/release-notes.md <<NOTES
           ## Provider v${VERSION} (Swift CLI)
 
+          **Commit:**        \`${GITHUB_SHA}\`
           **Binary hash:**   \`${BINARY_HASH}\`
           **Bundle hash:**   \`${BUNDLE_HASH}\`
           **Metallib hash:** \`${METALLIB_HASH}\` (built from mlx \`${{ steps.mlxkey.outputs.mlx_sha_short }}\`)
