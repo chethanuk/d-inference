@@ -1,6 +1,6 @@
 # Test
 
-> Last updated: 2026-09-11 · commit `d22ad0cf3`
+> Last updated: 2026-09-11 · commit `156843b35`
 
 How to run the unit tests for each component, the end-to-end suite that boots a
 real coordinator + Swift provider against ephemeral Postgres, and the docs
@@ -1001,7 +1001,7 @@ This prevents task scheduling from silently changing admission order. Sources: `
 ### 7. Docs lint
 
 ```bash
-make docs-check          # scripts/docs-check.sh — stamps, relative links, cited paths, orphans
+make docs-check          # scripts/docs-check.sh — stamps, relative links, cited paths, orphans, SIP-claim qualifier
 make docs-stamp FILES="docs/developer/test.md"   # refresh a stamp after editing
 ```
 

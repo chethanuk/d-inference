@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — SIP immutability caveat
+
+- State the kernel-integrity assumption behind the provider's SIP and Hardened Runtime guarantee: the protections hold while the macOS kernel has no unpatched vulnerability that bypasses SIP. The README, the threat model and the provider hardware requirements now say so, and the hardware requirements tell operators to install every macOS security update.
+
 ## Release candidate v0.9.2 — Gemma QAT caching, adaptive MTP and Nemotron Lightning (not shipped; 2026-09-10)
 
 Source changes since `v0.9.1`. Provider changes require a new signed bundle.

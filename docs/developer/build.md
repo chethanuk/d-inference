@@ -1,6 +1,6 @@
 # Build
 
-> Last updated: 2026-09-10 · commit `4f29957d2`
+> Last updated: 2026-09-11 · commit `156843b35`
 
 How to build every component of Darkbloom from a fresh clone: the Go
 coordinator, the Rust prompt-contract sidecar, the Swift provider CLI (with its
@@ -438,7 +438,7 @@ local stub servers; its default observation mode sends only public GETs.
 | `e2e-integration` | `go test ./e2e/... -run TestIntegration -v` |
 | `e2e-benchmark` | `go test ./e2e/... -run TestBenchmark -v` |
 | `e2e` | `e2e-integration` |
-| `docs-check` | `scripts/docs-check.sh` (stamps, links, cited paths, orphans) |
+| `docs-check` | `scripts/docs-check.sh` (stamps, links, cited paths, orphans, SIP-claim qualifier) |
 | `docs-stamp` | `scripts/docs-stamp.sh $(FILES)` — refresh freshness stamps |
 | `test` | `coordinator-test prompt-sidecar-test provider-test ui-test benchmark-wrapper-test docs-check` |
 | `build` | `coordinator-build prompt-sidecar-build provider-build ui-build` |
