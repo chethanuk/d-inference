@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — routing cost breakdown
+
+- Emit the winning provider's routing cost components (`routing.cost_{state,queue,pending,backlog,this_req,health}_ms`) and its effective/static decode TPS as DogStatsD histograms tagged by model, and add a stacked "Routing Cost Breakdown (p95) by Model" widget to the dev network dashboard.
+
 ## Release candidate v0.9.2 — Gemma QAT caching, adaptive MTP and Nemotron Lightning (not shipped; 2026-09-10)
 
 Source changes since `v0.9.1`. Provider changes require a new signed bundle.
