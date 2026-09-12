@@ -52,7 +52,7 @@ export function ModelTokenUsage({ stats, aliases }: { stats: PlatformStats; alia
     <section className="border-t border-border-dim pt-8" aria-labelledby="model-tokens-title">
       <div className="mb-6">
         <h2 id="model-tokens-title" className="text-lg font-medium text-text-primary">Tokens by model</h2>
-        <p className="mt-1 text-sm text-text-secondary">Prompt and completion tokens served per model over the last 24 hours.</p>
+        <p className="mt-1 text-sm text-text-secondary">Prompt and completion tokens served per model over the last 24 hours, from the top 50 served builds by token count. A build outside that cut is not counted toward its model.</p>
       </div>
       <div className="overflow-hidden rounded-2xl border border-border-dim bg-bg-white">{content}</div>
     </section>

@@ -129,7 +129,7 @@ Credential column: **Privy (required)** = `privyAuth()` must be non-empty or the
 
 ### Network stats snapshots
 
-The stats page renders a continuous overview without waiting for catalog or capacity requests. Geography leads into side-by-side request and token charts, 24-hour token bars per model with alias builds folded into the alias (`console-ui/src/app/stats/models/ModelTokenUsage.tsx`, `ModelTokenUsage`), graphical model-capacity lanes (`console-ui/src/app/stats/models/ModelCapacityLandscape.tsx`, `ModelCapacityLandscape`), and linked silicon-generation and memory charts (`console-ui/src/app/stats/hardware/HardwareComposition.tsx`, `HardwareComposition`). Model diagnostics and the provider directory open on demand (`console-ui/src/app/stats/page.tsx`, `StatsPage`).
+The stats page renders a continuous overview without waiting for catalog or capacity requests. Geography leads into side-by-side request and token charts, 24-hour token bars per model over the top 50 served builds, with alias builds folded into the alias (`console-ui/src/app/stats/models/ModelTokenUsage.tsx`, `ModelTokenUsage`), graphical model-capacity lanes (`console-ui/src/app/stats/models/ModelCapacityLandscape.tsx`, `ModelCapacityLandscape`), and linked silicon-generation and memory charts (`console-ui/src/app/stats/hardware/HardwareComposition.tsx`, `HardwareComposition`). Model diagnostics and the provider directory open on demand (`console-ui/src/app/stats/page.tsx`, `StatsPage`).
 
 | Concern | Contract | Code |
 |---|---|---|
