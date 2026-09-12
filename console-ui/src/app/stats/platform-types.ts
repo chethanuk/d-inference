@@ -60,6 +60,14 @@ export interface RequestFlowBucket {
   completion_tokens: number;
 }
 
+export interface ModelTokenBucket {
+  model: string;
+  requests: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface NetworkUtilization {
   utilization: number;
   warm_utilization?: number;
@@ -106,5 +114,7 @@ export interface PlatformStats {
   unknown_request_location_requests?: number | null;
   suppressed_request_city_requests?: number | null;
   request_location_privacy_min_requests?: number;
+  tokens_by_model_status?: "available" | "unavailable";
+  tokens_by_model?: ModelTokenBucket[] | null;
   time_series: TimeSeriesBucket[];
 }

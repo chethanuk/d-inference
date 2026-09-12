@@ -360,6 +360,15 @@ type UsageFlowBucket struct {
 	CompletionTokens int64 `json:"completion_tokens"`
 }
 
+// UsageTokensByModelBucket aggregates usage for one served model build
+// (usage.model) over a window.
+type UsageTokensByModelBucket struct {
+	Model            string `json:"model"`
+	Requests         int64  `json:"requests"`
+	PromptTokens     int64  `json:"prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens"`
+}
+
 // LeaderboardMetric selects the ranking column for a leaderboard query.
 type LeaderboardMetric string
 

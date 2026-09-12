@@ -70,6 +70,16 @@ type publicRequestFlowBucket struct {
 	CompletionTokens int64        `json:"completion_tokens"`
 }
 
+// publicModelTokensBucket is one served model build's share of the window's
+// requests and tokens.
+type publicModelTokensBucket struct {
+	Model            string `json:"model"`
+	Requests         int64  `json:"requests"`
+	PromptTokens     int64  `json:"prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens"`
+	TotalTokens      int64  `json:"total_tokens"`
+}
+
 type flowEndpoint struct {
 	Key         string  `json:"key"`
 	Kind        string  `json:"kind"` // "consumer" or "provider"
@@ -656,6 +666,27 @@ func (s *Server) aggregateRequestFlows(since time.Time) ([]publicRequestFlowBuck
 	})
 	if len(out) > 24 {
 		out = out[:24]
+	}
+	return out, nil
+}
+
+// aggregateTokensByModel returns per-build token totals for the window, in
+// the store's order (largest first, top 50). The result is never nil, so an
+// empty window serializes as [] rather than null.
+func (s *Server) aggregateTokensByModel(since time.Time) ([]publicModelTokensBucket, error) {
+	buckets, err := s.store.UsageTokensByModel(since)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]publicModelTokensBucket, 0, len(buckets))
+	for _, b := range buckets {
+		out = append(out, publicModelTokensBucket{
+			Model:            b.Model,
+			Requests:         b.Requests,
+			PromptTokens:     b.PromptTokens,
+			CompletionTokens: b.CompletionTokens,
+			TotalTokens:      b.PromptTokens + b.CompletionTokens,
+		})
 	}
 	return out, nil
 }

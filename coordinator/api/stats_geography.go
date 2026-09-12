@@ -14,7 +14,8 @@ const (
 	statsGeographyUnavailable statsGeographyStatus = "unavailable"
 )
 
-// A geography refresh publishes the outcome of each input independently.
+// A geography refresh (request locations, flows and per-model tokens)
+// publishes the outcome of each input independently.
 // Unavailable values are null, never successful empty arrays or zero counts.
 // UpdatedAt is the observation start, separate from the core snapshot's time.
 type statsGeography struct {
@@ -26,12 +27,16 @@ type statsGeography struct {
 	UnknownRequests  *int64                        `json:"unknown_request_location_requests"`
 	SuppressedCities *int64                        `json:"suppressed_request_city_requests"`
 	Flows            []publicRequestFlowBucket     `json:"request_flows"`
+	// Per-model tokens share this lane so a slow aggregate never blocks core stats.
+	TokensByModelStatus statsGeographyStatus      `json:"tokens_by_model_status"`
+	TokensByModel       []publicModelTokensBucket `json:"tokens_by_model"`
 }
 
 func unavailableStatsGeography() statsGeography {
 	return statsGeography{
-		LocationsStatus: statsGeographyUnavailable,
-		FlowsStatus:     statsGeographyUnavailable,
+		LocationsStatus:     statsGeographyUnavailable,
+		FlowsStatus:         statsGeographyUnavailable,
+		TokensByModelStatus: statsGeographyUnavailable,
 	}
 }
 
@@ -75,6 +80,14 @@ func (s *Server) computeStatsGeography() ([]byte, error) {
 	} else {
 		s.recordStatsGeographyFailure("request_flows", err)
 	}
+
+	tokensByModel, err := s.aggregateTokensByModel(since)
+	if err == nil {
+		geography.TokensByModelStatus = statsGeographyAvailable
+		geography.TokensByModel = tokensByModel
+	} else {
+		s.recordStatsGeographyFailure("tokens_by_model", err)
+	}
 	// Query failures are a valid availability response, not a failed refresh:
 	// replace previous geographic figures so clients cannot mistake them for
 	// fresh or empty data. Core stats retain their own failure/expiry rules.
@@ -95,5 +108,7 @@ func (g statsGeography) addTo(response map[string]any) {
 	response["unknown_request_location_requests"] = g.UnknownRequests
 	response["suppressed_request_city_requests"] = g.SuppressedCities
 	response["request_flows"] = g.Flows
+	response["tokens_by_model_status"] = g.TokensByModelStatus
+	response["tokens_by_model"] = g.TokensByModel
 	response["request_location_privacy_min_requests"] = minRequestsPerCityBucket
 }
