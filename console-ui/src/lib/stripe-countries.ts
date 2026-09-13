@@ -35,6 +35,7 @@ export const STRIPE_CONNECT_COUNTRIES: StripeCountry[] = [
   { code: "LT", name: "Lithuania", flag: "\u{1F1F1}\u{1F1F9}" },
   { code: "LU", name: "Luxembourg", flag: "\u{1F1F1}\u{1F1FA}" },
   { code: "LV", name: "Latvia", flag: "\u{1F1F1}\u{1F1FB}" },
+  { code: "MK", name: "North Macedonia", flag: "\u{1F1F2}\u{1F1F0}" },
   { code: "MT", name: "Malta", flag: "\u{1F1F2}\u{1F1F9}" },
   { code: "MX", name: "Mexico", flag: "\u{1F1F2}\u{1F1FD}" },
   { code: "MY", name: "Malaysia", flag: "\u{1F1F2}\u{1F1FE}" },
