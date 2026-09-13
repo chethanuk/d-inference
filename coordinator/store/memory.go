@@ -1334,6 +1334,49 @@ func (s *MemoryStore) UsageFlowBuckets(since time.Time, providerLocs map[string]
 	return out, nil
 }
 
+// UsageTokensByModel aggregates in-memory usage per served model build,
+// matching the postgres order (total tokens desc, then model) and top-50 cap.
+func (s *MemoryStore) UsageTokensByModel(since time.Time) ([]UsageTokensByModelBucket, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	byModel := make(map[string]*UsageTokensByModelBucket)
+	for _, r := range s.usage {
+		ts := r.Timestamp
+		if ts.IsZero() {
+			ts = r.CreatedAt
+		}
+		if ts.Before(since) || r.Model == "" {
+			continue
+		}
+		b, ok := byModel[r.Model]
+		if !ok {
+			b = &UsageTokensByModelBucket{Model: r.Model}
+			byModel[r.Model] = b
+		}
+		b.Requests++
+		b.PromptTokens += int64(r.PromptTokens)
+		b.CompletionTokens += int64(r.CompletionTokens)
+	}
+
+	out := make([]UsageTokensByModelBucket, 0, len(byModel))
+	for _, b := range byModel {
+		out = append(out, *b)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		ti := out[i].PromptTokens + out[i].CompletionTokens
+		tj := out[j].PromptTokens + out[j].CompletionTokens
+		if ti != tj {
+			return ti > tj
+		}
+		return out[i].Model < out[j].Model
+	})
+	if len(out) > 50 {
+		out = out[:50]
+	}
+	return out, nil
+}
+
 // KeyCount returns the number of active API keys.
 func (s *MemoryStore) KeyCount() int {
 	s.mu.RLock()

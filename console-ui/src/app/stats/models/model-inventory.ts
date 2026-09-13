@@ -39,7 +39,7 @@ function modelProviders(modelID: string, providers: ProviderStats[], providersBy
   return providersByModel.get(modelID) ?? [];
 }
 
-function aliasMemberBuilds(alias: CatalogAliasSummary, includeRetired = true): string[] {
+export function aliasMemberBuilds(alias: CatalogAliasSummary, includeRetired = true): string[] {
   const builds = new Set<string>();
   builds.add(alias.desiredBuild);
   if (alias.previousBuild) builds.add(alias.previousBuild);

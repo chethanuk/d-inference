@@ -11,6 +11,7 @@ import { NetworkSummary, NetworkResources } from "./NetworkSummary";
 import { NetworkGeography } from "./geography/NetworkGeography";
 import { TrafficPanel } from "./traffic/TrafficPanel";
 import { ModelCapacityLandscape } from "./models/ModelCapacityLandscape";
+import { ModelTokenUsage } from "./models/ModelTokenUsage";
 import { HardwareComposition } from "./hardware/HardwareComposition";
 import { ProviderDashboard } from "./ProviderDashboard";
 
@@ -32,6 +33,7 @@ export default function StatsPage() {
               <div className="space-y-9 pb-9">
                 <NetworkGeography stats={stats} />
                 <TrafficPanel refreshToken={network.fetchedAt} />
+                <ModelTokenUsage stats={stats} aliases={network.catalogData?.aliases ?? []} />
                 <ModelCapacityLandscape stats={stats} catalogData={network.catalogData} capacityModels={network.capacityModels} />
                 <HardwareComposition stats={stats} />
               </div>

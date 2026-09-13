@@ -1,6 +1,6 @@
 # Quickstart: first request in five steps
 
-> Last updated: 2026-09-04 · commit `7ae06021f`
+> Last updated: 2026-09-11 · commit `ef7b5a9aa`
 
 Get an API key from the console, list the models your key can use, and make your first chat completion against `https://api.darkbloom.dev` — first with `curl`, then from the OpenAI and Anthropic SDKs. For developers integrating the API; each step is one action. Route details for everything used here are in [`../reference/api-contracts.md`](../reference/api-contracts.md).
 
@@ -117,7 +117,9 @@ Requests land on `POST /v1/messages` (`handleAnthropicMessages`, `coordinator/ap
 To display network activity, read `GET /v1/stats`, `GET /v1/network/totals`,
 or `GET /v1/network/series`. If one returns 503 `service_unavailable`, keep
 your last displayed value and retry later; do not replace it with zero.
-Successful empty windows are valid data. The [public stats contract](../reference/api-contracts.md#public-stats-and-health-5)
+Successful empty windows are valid data. `/v1/stats` also carries 24-hour
+tokens per model (`tokens_by_model`), which is `null` while that section is
+unavailable. The [public stats contract](../reference/api-contracts.md#public-stats-and-health-5)
 defines refresh intervals, maximum cached staleness, and window aliases.
 
 ## Troubleshooting

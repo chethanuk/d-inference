@@ -38,6 +38,7 @@ type countingStatsStore struct {
 	usageTotalsSinceFail atomic.Bool
 	usageTimeSeriesFail  atomic.Bool
 	usageCountFail       atomic.Bool
+	tokensByModelFail    atomic.Bool
 }
 
 var errUsageStatementTimeout = errors.New("store: usage statement: timeout: context deadline exceeded")
@@ -99,6 +100,13 @@ func (c *countingStatsStore) UsageFlowBuckets(since time.Time, locs map[string]*
 		return nil, nil
 	}
 	return c.Store.UsageFlowBuckets(since, locs)
+}
+
+func (c *countingStatsStore) UsageTokensByModel(since time.Time) ([]store.UsageTokensByModelBucket, error) {
+	if c.tokensByModelFail.Load() {
+		return nil, errUsageStatementTimeout
+	}
+	return c.Store.UsageTokensByModel(since)
 }
 
 type staticGeoResolver struct{ loc *store.ProviderLocation }

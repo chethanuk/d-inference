@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — per-model token usage on /stats
+
+- Show the last 24 hours of tokens per model as a bar chart on the public stats page. `/v1/stats` adds `tokens_by_model` (top 50 served builds) on the geography refresh lane, so a slow or failed aggregate reports `unavailable` without blocking core stats.
+
 ## Unreleased — doctor and attestation reliability
 
 - Prevent large process lists from blocking `doctor` and `verify`. Capture contention and sleep-probe output without pipe backpressure and apply an execution deadline; preserve diagnostic output and failure handling.

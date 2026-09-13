@@ -38,9 +38,10 @@ describe("Continuous network overview",()=>{
     render(<StatsPage/>);
     expect(await screen.findByText("Macs online")).toBeInTheDocument();
     expect(screen.getByRole("status",{name:"Geography availability"})).toHaveTextContent("Request locations are temporarily unavailable");
-    for (const name of ["Activity over time","Model capacity","The silicon behind the network"]) {
+    for (const name of ["Activity over time","Tokens by model","Model capacity","The silicon behind the network"]) {
       expect(screen.getByRole("heading",{name})).toBeInTheDocument();
     }
+    expect(screen.getByText("Token usage by model is temporarily unavailable.")).toBeInTheDocument();
     expect(screen.getByText("Connected now")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button",{name:"Requests"}));
     expect(screen.getByText("Request map unavailable")).toBeInTheDocument();
@@ -71,7 +72,7 @@ describe("Continuous network overview",()=>{
     expect(await screen.findByText("Macs online")).toBeInTheDocument();
     expect(screen.getByText("Refreshes every 30 seconds")).toBeInTheDocument();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
-    for(const name of ["Network geography","Activity over time","Model capacity","The silicon behind the network"]){
+    for(const name of ["Network geography","Activity over time","Tokens by model","Model capacity","The silicon behind the network"]){
       expect(screen.getByRole("heading",{name})).toBeInTheDocument();
     }
     expect(screen.queryByRole("searchbox",{name:"Search provider fleet"})).not.toBeInTheDocument();
